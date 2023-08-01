@@ -17,6 +17,7 @@ const App = () => {
 
   useEffect(() => {
     if (searchQuery) {
+      setIsLoading(true);
       fetchImages(currentPage, searchQuery)
         .then(response => {
           setImages(prevImages => [...prevImages, ...response.data.hits]);
@@ -35,7 +36,6 @@ const App = () => {
   };
 
   const handleLoadMore = () => {
-    setIsLoading(true);
     setCurrentPage(prevPage => prevPage + 1);
   };
 
@@ -63,7 +63,7 @@ const App = () => {
     >
       <Searchbar onSubmit={handleFormSubmit} />
       <ImageGallery gallery={images} onClick={handleImageClick} />
-      {isLoading && <Loader />}
+      {isLoading && <Loader />}{' '}
       {shouldRenderButton && <Button onClick={handleLoadMore} />}
       {showModal && (
         <Modal largeImageURL={largeImageURL} onClose={handleCloseModal} />
