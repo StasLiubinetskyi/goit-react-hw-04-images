@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import Searchbar from './Searchbar/Searchbar';
 import ImageGallery from './ImageGallery/ImageGallery';
 import Button from './Button/Button';
@@ -6,89 +6,70 @@ import Loader from './Loader/Loader';
 import Modal from './Modal/Modal';
 import fetchImages from '../api/apiKey';
 
-export class App extends Component {
-  state = {
-    images: [],
-    currentPage: 1,
-    searchQuery: '',
-    isLoading: false,
-    showModal: false,
-    largeImageURL: '',
-    totalHits: 0,
-  };
+const App = () => {
+  const [images, setImages] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [largeImageURL, setLargeImageURL] = useState('');
+  const [totalHits, setTotalHits] = useState(0);
 
-  async componentDidUpdate(prevProps, prevState) {
-    if (prevState.searchQuery !== this.state.searchQuery) {
-      await this.fetchImages();
+  useEffect(() => {
+    if (searchQuery) {
+      fetchImages(currentPage, searchQuery)
+        .then(response => {
+          setImages(prevImages => [...prevImages, ...response.data.hits]);
+          setTotalHits(response.data.totalHits);
+        })
+        .catch(error => console.log(error))
+        .finally(() => setIsLoading(false));
     }
-  }
+  }, [searchQuery, currentPage]);
 
-  fetchImages = () => {
-    const { currentPage, searchQuery } = this.state;
-
-    this.setState({ isLoading: true });
-
-    fetchImages(currentPage, searchQuery)
-      .then(response => {
-        this.setState(prevState => ({
-          images: [...prevState.images, ...response.data.hits],
-          totalHits: response.data.totalHits,
-          currentPage: prevState.currentPage + 1,
-        }));
-      })
-      .catch(error => console.log(error))
-      .finally(() => this.setState({ isLoading: false }));
+  const handleFormSubmit = query => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+    setImages([]);
+    setTotalHits(0);
   };
 
-  handleFormSubmit = query => {
-    this.setState({
-      searchQuery: query,
-      currentPage: 1,
-      images: [],
-      totalHits: 0,
-    });
+  const handleLoadMore = () => {
+    setIsLoading(true);
+    setCurrentPage(prevPage => prevPage + 1);
   };
 
-  handleLoadMore = () => {
-    this.fetchImages(); 
+  const handleImageClick = largeImageURL => {
+    setShowModal(true);
+    setLargeImageURL(largeImageURL);
   };
 
-  handleImageClick = largeImageURL => {
-    this.setState({ showModal: true, largeImageURL });
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setLargeImageURL('');
   };
 
-  handleCloseModal = () => {
-    this.setState({ showModal: false, largeImageURL: '' });
-  };
+  const shouldRenderButton =
+    images.length > 0 && !isLoading && images.length < totalHits;
 
-  render() {
-    const { images, isLoading, showModal, largeImageURL, totalHits } =
-      this.state;
-    const shouldRenderButton =
-      images.length > 0 && !isLoading && images.length < totalHits;
-
-    return (
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr',
-          gridGap: '16px',
-          paddingBottom: '24px',
-        }}
-      >
-        <Searchbar onSubmit={this.handleFormSubmit} />
-        <ImageGallery gallery={images} onClick={this.handleImageClick} />
-        {isLoading && <Loader />}
-        {shouldRenderButton && <Button onClick={this.handleLoadMore} />}
-        {showModal && (
-          <Modal
-            largeImageURL={largeImageURL}
-            onClose={this.handleCloseModal}
-          />
-        )}
-      </div>
-    );
-  }
-}
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr',
+        gridGap: '16px',
+        paddingBottom: '24px',
+      }}
+    >
+      <Searchbar onSubmit={handleFormSubmit} />
+      <ImageGallery gallery={images} onClick={handleImageClick} />
+      {isLoading && <Loader />}
+      {shouldRenderButton && <Button onClick={handleLoadMore} />}
+      {showModal && (
+        <Modal largeImageURL={largeImageURL} onClose={handleCloseModal} />
+      )}
+    </div>
+  );
+};
 
 export default App;
